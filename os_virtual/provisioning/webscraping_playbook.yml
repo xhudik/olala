@@ -1,0 +1,108 @@
+---
+# Ansible playbook for webscraping tutorial in R
+
+- name: webscraping tutorial provisioning
+  hosts: all
+  ##connection: local
+  vars:
+    var_some: True
+  remote_user: root
+
+  
+  tasks:
+  - name: Creating admin group
+    group:
+      name: admin
+      state: present
+    
+  - name: Add user karel
+    user:
+      name: karel
+      shell: /bin/bash
+      #1234 http://docs.ansible.com/ansible/latest/faq.html#how-do-i-generate-crypted-passwords-for-the-user-module
+      password: "$6$2i2URl3AsiW7$YX6RWZddSbCmjvSlt7nEZlw1cuoNSz9U8RDnM.CKtVePTdwQo3WLpmfu8xsc62fGU1TEV85HS36VV4ph0X0HL."
+      append: yes
+      groups: admin
+
+      
+  - name: Make sure we can sudo as admin group
+    lineinfile: 
+      dest: /etc/sudoers 
+      state: present 
+      regexp: '^%admin' 
+      line: '%admin ALL=(ALL) ALL'
+
+  - name: Also make sure ssh-agent works via sudo
+    lineinfile: 
+      dest: /etc/sudoers 
+      state: present 
+      regexp: '^Defaults env_keep\+\=SSH_AUTH_SOCK'
+      line: 'Defaults env_keep+=SSH_AUTH_SOCK'
+
+  - name: Final sudoers file check
+    shell: visudo -q -c -f /etc/sudoers 
+
+  - name: Change passwd for vagrant
+    user:
+      name: vagrant
+      #1234 http://docs.ansible.com/ansible/latest/faq.html#how-do-i-generate-crypted-passwords-for-the-user-module
+      password: "$6$eLJO./mXhj/Si$/okbrekAHYNQ0Rs68qnpqp5kO2KgGveGEcy0D6ofuMKi866X5Hj5FjzEAdBzezOTxNg1I09yS5hA9K8ZnRImb1"
+  
+  - name: Add repo for R packages
+    apt_repository:
+      repo: deb http://mirrors.nic.cz/R/bin/linux/debian/ jessie-cran34/
+      state: present
+      filename: 'R_repo'
+      
+      
+  - name: Update all packages to the latest version
+    apt:
+      upgrade: dist
+    
+  - name: Install XFCE
+    apt:
+      name: task-xfce-desktop
+      update_cache: yes 
+    
+  - name: Install all required packages 
+    apt: name={{item}} state=latest update_cache=yes allow_unauthenticated=yes
+    with_items:
+      - openjdk-7-jdk
+      - r-base 
+      - r-base-dev
+      - libopenblas-base
+      - mc
+      - git
+      - libcurl3-dev
+      - libssl-dev
+      - libxml2-dev
+      
+      
+  - name: Reconfigure R to find installed Java framework on the system      
+    command: R CMD javareconf    
+    
+  - name: Copy R installation script
+    copy: src=setup_packages.R dest=/tmp/setup_packages.R  
+
+  - name: Install R packages using a setup script
+    command: R -f /tmp/setup_packages.R
+    
+  - name: Download Rstudio desktop
+    get_url: url="https://download1.rstudio.org/rstudio-1.0.153-i386.deb"
+       dest="/tmp/rstudio-1.0.153-i386.deb"    
+
+  - name: Install Rstudio desktop
+    apt: deb="/tmp/rstudio-1.0.153-i386.deb"
+    
+    
+#  - name: Download VirtualBox additions
+#    get_url: 
+#      url: "http://download.virtualbox.org/virtualbox/5.1.26/VBoxGuestAdditions_5.1.26.iso"
+#      dest:  "/tmp/VBoxGuestAdditions_5.1.26.iso"
+#    
+#  - name: Mount iso image
+#    command: mount -o loop /tmp/VBoxGuestAdditions_5.1.26.iso /mnt
+#    
+#  - name: Install additions
+#    command: /mnt/./VBoxLinuxAdditions.run
+#    

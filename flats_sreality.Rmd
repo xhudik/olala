@@ -1,0 +1,142 @@
+---
+title: "Web scraping with R"
+output: html_notebook
+---
+
+
+## Web scraping
+DS needs data. You can rely on already created data - but often it is better to create your own.
+Internet is one of the best data sources for many areas - social media reseach, various online marketing campaigns, etc.
+Data can be obtained by parsing (some XML/Html parsee) already donwloaded web pages. 
+There is plethora of tools that can be used.
+
+The process of getting data from a web is called [Web scraping](https://en.wikipedia.org/wiki/Web_scraping). Web scraping a web page involves fetching it and extracting from it.
+
+### Simple version -- mainly static context
+Let's try R and its [rvest](https://cran.r-project.org/web/packages/rvest) package. 
+
+First, we need to find/localize what information we are interested in. We need to know *XPath* or some other form of the localtion within a web page. 
+For this, we can use [Firebird](http://getfirebug.com/) plugin, for example.
+
+Let's say we want to get information about film scores in [IMDB](http://www.imdb.com). We can pick one particular movie, e.g. [The Lego Movie](http://www.imdb.com/title/tt1490017/),
+open it in Firefox and activate the Firebug plugin.
+
+![](/home/tomas/td/projects/internal/web_scraping/firebug.jpg)
+
+Click on the element inspector (number 1 in the picture above), find the element with the score and click on it (number 2), Firebug will emphasize the element in the pafe source(number 3). 
+We can get/copy the exact XPath/CSS/html by clicking the right button on the element. In our case it is:
+
+* XPath: `/html/body/div[1]/div/div[4]/div[5]/div[1]/div/div/div[2]/div[2]/div/div[1]/div[1]/div[1]/strong/span`
+* HTML: `<span itemprop="ratingValue">7.8</span>`
+
+From the source we can see that one element above our `<span>` is `stronger`. It is better not to work with exact pat from the root `/html` since even slight changes in the code might 
+break our scraping. Therfore we will work with simple `<stronger><span>`instead of the complete path.
+
+Now we can go to RStudio and start mining. Lets load needed libraries
+
+```{r results='hide'}
+library(tidyverse)
+library(rvest)
+```
+
+And try to get the score
+```{r}
+lego_url <- "http://www.imdb.com/title/tt1490017/"
+
+##
+rating <- read_html(lego_url) %>% 
+  #search for elements <strong> <span>
+  html_nodes("strong span") %>%
+  #take a text string from span element
+  html_text() %>%
+  #convert to number
+  as.numeric()
+
+rating
+```
+
+With some 5 lines of R code we got the score for *The Lego Movie*. Now it should be easy to run this code against any set of movies on [IMDB](http://www.imdb.com)
+
+This is a good approach for getting mainly static data (e.g. Wikipedia pages), however it is not
+possible to use for getting dynamic context (like social media that use logins and complex Javascript). 
+
+### Scraping complex dynamic pages
+
+A simple use case for the start -- _let's find a price for a property on [sreality.cz](https://www.sreality.cz/hledani/prodej/byty/brno,brno-venkov)_.
+We are looking for XPath `//div[@class="dir-property-list"` (why this string, or what other strings might lead to the same result - is homework for you :)
+
+```{r}
+properties <- read_html("https://www.sreality.cz/hledani/prodej/byty/brno,brno-venkov") %>% html_nodes(xpath = '//div[@class="dir-property-list"]')
+```
+That should be it, however if we take a look on results - it is empty
+```{r}
+length(properties)
+```
+
+In our web-browser there is 20 pages of results...
+The answer is simple but definetly not obvious. `rvest` uses `curl` for browsing/downloading web pages. `curl` is a great command line tool but definetly not good fit for Javascript.
+If we check what exactly _curl_ get:
+```{bash}
+curl "https://www.sreality.cz/hledani/prodej/byty/brno,brno-venkov" > sreality_curl.html
+```
+We can see that `sreality_curl.htm` is very diffrent than if we load the page within a standard browser!
+
+Something emulating a proper browser should help... There is a great tool: [PhantomJs](http://phantomjs.org/) -- PhantomJS is a headless WebKit scriptable with a JavaScript API.
+[Selenium](https://en.wikipedia.org/wiki/Selenium_(software)) -- enables web browser automation. It can work via IDE (picture), or driver
+![Selenium IDE in Action](/home/tomas/td/projects/internal/web_scraping/selenium-ide.png)
+
+These SW are great but we would need to speak Java and Javascript. There is R wrapper [RSelenium](https://cran.r-project.org/web/packages/RSelenium).
+A good introduction to the package can be found in the package [vignettes](https://cran.r-project.org/web/packages/RSelenium/vignettes/), 
+or [webinars](https://cran.r-project.org/web/packages/RSelenium/vignettes/OCRUG-webinar.html)
+
+
+Now, let's go back to our task
+
+```{r}
+library(tidyverse)
+library(RSelenium)
+```
+
+```{r}
+#create tibble structure for results
+flats <- tibble(url=character(),text=character())
+```
+
+```{r}
+rD <- rsDriver(port=6539L, browser = "firefox")
+remDr <- rD$client
+```
+
+open the page
+
+!!!!https://www.zillow.com/castle-hill-bronx-new-york-ny/!!!
+
+```{r}
+remDr$navigate("https://www.sreality.cz/hledani/prodej/byty/brno,brno-venkov?plocha-od=85&plocha-do=10000000000")
+```
+
+we can play with it in many ways (get exact window/item position), get a screenshot, etc
+get a screenshot
+```{r}
+remDr$screenshot(display = TRUE)
+
+```
+
+![hmm](/home/tomas/td/projects/internal/web_scraping/screenshot.png)
+
+
+Since we want to process all results (not just the ones displayed on the first page), we need to get number of all results.
+Lets find the number of found properties via FireBug. Once we have the path, let's validate via _RSelenium_ (show element with yellow background for 
+3 seconds)
+```{r}
+found <- remDr$findElement(using="css",value='p[class="info ng-binding"]')
+found$highlightElement(wait = 3)
+```
+
+get the number
+```{r}
+elem <- remDr$findElement(using="xpath",value='//p[@class="info ng-binding"]/span[2]')
+results <- as.integer(elem$getElementText())
+```
+
+
