@@ -1,6 +1,17 @@
 ---
 # Ansible playbook for webscraping tutorial in R
 
+#After this vagrant provision ends successfuly - in virtualBox set up:
+#  1. devices/shared dirs
+#  2. devices/shared clipboard
+#  3. devices/drag&drop
+#
+#Then, within virtualbox -  you need to run Selenium (java -jar server selenium-server-standalone-2.53.1.jar 
+#and you can start to play with RSelenium (client) in RStudio
+#
+    
+
+
 - name: webscraping tutorial provisioning
   hosts: all
   ##connection: local
@@ -19,7 +30,7 @@
     user:
       name: karel
       shell: /bin/bash
-      #1234 http://docs.ansible.com/ansible/latest/faq.html#how-do-i-generate-crypted-passwords-for-the-user-module
+      #1234http://docs.ansible.com/ansible/latest/faq.html#how-do-i-generate-crypted-passwords-for-the-user-module
       password: "$6$2i2URl3AsiW7$YX6RWZddSbCmjvSlt7nEZlw1cuoNSz9U8RDnM.CKtVePTdwQo3WLpmfu8xsc62fGU1TEV85HS36VV4ph0X0HL."
       append: yes
       groups: admin
@@ -45,7 +56,7 @@
   - name: Change passwd for vagrant
     user:
       name: vagrant
-      #1234 http://docs.ansible.com/ansible/latest/faq.html#how-do-i-generate-crypted-passwords-for-the-user-module
+      #1234http://docs.ansible.com/ansible/latest/faq.html#how-do-i-generate-crypted-passwords-for-the-user-module
       password: "$6$eLJO./mXhj/Si$/okbrekAHYNQ0Rs68qnpqp5kO2KgGveGEcy0D6ofuMKi866X5Hj5FjzEAdBzezOTxNg1I09yS5hA9K8ZnRImb1"
   
   - name: Add repo for R packages
@@ -59,14 +70,10 @@
     apt:
       upgrade: dist
     
-  - name: Install XFCE
-    apt:
-      name: task-xfce-desktop
-      update_cache: yes 
-    
   - name: Install all required packages 
     apt: name={{item}} state=latest update_cache=yes allow_unauthenticated=yes
     with_items:
+      - task-xfce-desktop
       - openjdk-7-jdk
       - r-base 
       - r-base-dev
@@ -93,16 +100,22 @@
 
   - name: Install Rstudio desktop
     apt: deb="/tmp/rstudio-1.0.153-i386.deb"
+
+  - name: Create directory for dektop.ini
+    file: path="/home/karel/.config/RStudio" state=directory mode=0755    
     
+  - name: Copy desktop.ini file (prevent bug with a strange font)
+    copy: src=desktop.ini dest="/home/karel/.config/RStudio/desktop.ini"
     
-#  - name: Download VirtualBox additions
-#    get_url: 
-#      url: "http://download.virtualbox.org/virtualbox/5.1.26/VBoxGuestAdditions_5.1.26.iso"
-#      dest:  "/tmp/VBoxGuestAdditions_5.1.26.iso"
-#    
-#  - name: Mount iso image
-#    command: mount -o loop /tmp/VBoxGuestAdditions_5.1.26.iso /mnt
-#    
-#  - name: Install additions
-#    command: /mnt/./VBoxLinuxAdditions.run
-#    
+  - name: Download Selenium server
+    get_url: url="http://selenium-release.storage.googleapis.com/2.53/selenium-server-standalone-2.53.1.jar"
+       dest="/home/karel/selenium-server-standalone-2.53.1.jar"    
+    
+  - name: Make sure all content in /home/karel belongs to karel
+    file:    
+       path: /home/karel
+       recurse: yes
+       owner: karel
+       group: karel
+         
+         
