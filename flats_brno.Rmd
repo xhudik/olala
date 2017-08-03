@@ -307,7 +307,7 @@ dim(flats)
 ```
 
 
-### What next?
+## What next?
 Standard feature engineering:
 
 - make _price_ column consistent
@@ -316,7 +316,7 @@ Standard feature engineering:
 By solving these questions, we create a valid data source for further analysis.
 
 
-### Average price for bigger Brno's flats
+### For example: average price for bigger Brno's flats
 
 
 Convert square meters into numeric
