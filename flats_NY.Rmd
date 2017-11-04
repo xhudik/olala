@@ -1,0 +1,272 @@
+---
+title: "Web scraping with R"
+output: html_notebook
+---
+
+## Introduction
+Data scientists are working with data all the time. The most often the data are provided by task owner/project manager. Those data 
+are crucial. However, sometimes the data doesn't exist (are not generated), or would be great to enrich the existing data with some additional features
+-- e.g. weather, social network comments, forums etc. Internet is one of the best/biggest data sources for many areas - social media research, various
+online marketing campaigns or climate data.
+
+In this notebook we will show how to get/scrape data from the Internet. We will demonstrate that it is relatively easy to get data also from complex
+web-pages with JavaScript, sessions and other modern web-programming elements.
+
+## Web scraping
+The process of getting data from a web is called [Web scraping](https://en.wikipedia.org/wiki/Web_scraping). Scraping a web page, involves fetching 
+it and extracting data from it. There are many ways and tools how to do it. In this notebook we will work with R since R is routinely used by many 
+data scientist. 
+
+We will show how to scrape data technically, however we need to be aware of [law aspect]((https://en.wikipedia.org/wiki/Web_scraping#Legal_issues)) 
+as well. Some companies do not want to process their pages by robots. The law is not complete and it varies country by country and it is still 
+evolving.
+
+### Simple approach -- mainly static context
+Let's do the web scraping with [rvest](https://cran.r-project.org/web/packages/rvest) package. First, we need to find/localize what 
+data we are interested in. We need to know [*XPath*](https://www.w3schools.com/xml/xpath_intro.asp) 
+or some other form of the location within the web page. 
+For this, we can use [Firebug](http://getfirebug.com/) plugin (there are many similar tools).
+
+Let's say we want to get information about a score in film from [IMDB](http://www.imdb.com). We pick one particular movie, e.g. 
+[The Lego Movie](http://www.imdb.com/title/tt1490017/),
+open it in Firefox and activate the Firebug plugin.
+
+![](firebug.jpg)
+
+Click on the element inspector (number 1 in the picture above), find the element with the score and click on it (number 2), Firebug will emphasize 
+the element in the page source code (number 3). We can get/copy the exact XPath/CSS/html by clicking the right button on the element. In our case it is:
+
+* XPath: `/html/body/div[1]/div/div[4]/div[5]/div[1]/div/div/div[2]/div[2]/div/div[1]/div[1]/div[1]/strong/span`
+* HTML: `<span itemprop="ratingValue">7.8</span>`
+
+In general, it is better not to work with the exact path from the root `/html`, since even a slight change in the code would
+break our scraping (path will become invalid). Therefore we will work with a simpler path.
+From the source code, we can see that one element above our `<span>` is `stronger`.  Let's stick with `<stronger><span>` for now. 
+
+Open R Studio and start the scraping! Load libraries
+
+```{r results='hide'}
+library(tidyverse)
+library(rvest)
+```
+
+Try to get the score
+```{r}
+lego_url <- "http://www.imdb.com/title/tt1490017/"
+
+rating <- read_html(lego_url) %>% 
+  #search for elements <strong> <span>
+  html_nodes("strong span") %>%
+  #take a text string from span element
+  html_text() %>%
+  #convert to number
+  as.numeric()
+
+rating
+```
+
+With some 5 lines of R code we got the score for *The Lego Movie*. Now it should be easy to run this code against any set of movies on [IMDB](http://www.imdb.com)
+
+This is a good approach for getting mainly static data (e.g. Wikipedia pages), however it is not
+possible to use for getting dynamic context (like social media that use logins and complex JavaScript). 
+
+### Scraping complex dynamic pages
+
+A simple use case for the start -- _let's find a mean price for properties in Bronx on
+[zillow.com]("https://www.zillow.com/homes/for_sale/Castle-Hill-Bronx-New-York-NY/pmf,pf_pt/270812_rid/globalrelevanceex_sort/40.828359,-73.826516,40.809652,-73.87265_rect/14_zm/)_.
+First, we need to found out a number of properties, in the upper right corner
+![](nproperties.jpg)
+
+With Firebug, we find out - we need XPath: `//div/h2` (why this string, or what other strings might lead to the same result - is a homework for you :))
+
+```{r}
+properties <- read_html("https://www.zillow.com/homes/for_sale/Castle-Hill-Bronx-New-York-NY/pmf,pf_pt/270812_rid/globalrelevanceex_sort/40.828359,-73.826516,40.809652,-73.87265_rect/14_zm/") %>% 
+  html_nodes(xpath = '//div/h2')
+```
+That should be it, however if we take a look on results - it is empty
+```{r}
+length(properties)
+```
+
+In our web-browser there is 86 results instead ...
+
+The answer is simple but definitely not obvious. `rvest` uses `curl` for browsing/downloading web pages. `curl` is a great command line 
+tool but definitely not good fit for JavaScript. If we check what exactly _curl_ got:
+```{bash}
+curl "https://www.zillow.com/homes/for_sale/Castle-Hill-Bronx-New-York-NY/pmf,pf_pt/270812_rid/globalrelevanceex_sort/40.828359,-73.826516,40.809652,-73.87265_rect/14_zm/" > zillow_curl.html
+```
+
+Open `zillow_curl.html` in a browser -- it is slightly different!
+
+![](nproperties2.jpg)
+
+
+Therefore we need something that emulates a proper browser... There are great tools: [PhantomJs](http://phantomjs.org/) -- PhantomJS is a 
+headless WebKit scriptable with a JavaScript API. [Selenium](https://en.wikipedia.org/wiki/Selenium_(software)) -- enables web browser automation. 
+It can work via IDE:
+![Selenium IDE in Action](selenium-ide.png)
+
+ or a driver.
+
+These SW are great but we would need to speak 2 extra languages: Java and JavaScript. Fortunately, there is R wrapper 
+[RSelenium](https://cran.r-project.org/web/packages/RSelenium). A good introduction to the package can be found in the package [vignettes](https://cran.r-project.org/web/packages/RSelenium/vignettes/), or 
+[webinars](https://cran.r-project.org/web/packages/RSelenium/vignettes/OCRUG-webinar.html)
+
+
+Now, let's go back to our task
+
+```{r results='hide'}
+library(tidyverse)
+library(RSelenium)
+```
+
+Initialize our session (browser).
+```{r}
+rD <- rsDriver(port=6539L, browser = "firefox")
+remDr <- rD$client
+```
+
+and open the page
+
+```{r}
+remDr$navigate("https://www.zillow.com/homes/for_sale/Castle-Hill-Bronx-New-York-NY/pmf,pf_pt/270812_rid/globalrelevanceex_sort/40.828359,-73.826516,40.809652,-73.87265_rect/14_zm/")
+```
+
+we can play with it in many ways (get exact window/item position, screenshot, etc.)
+For example, get a screenshot
+```{r}
+remDr$screenshot(display = TRUE)
+
+```
+
+![](screenshot.png)
+
+
+We can see that the page is correct - it contains the info we need (number of properties).
+Let's find the number via FireBug. Once we have the path, we can validate it via _RSelenium_ (show the element with yellow background for 
+5 seconds)
+```{r}
+found <- remDr$findElement(using = "xpath",value='//div/h2')
+found$highlightElement(wait = 5)
+```
+
+![Notice the yellow background](item_emphasized.jpg)
+
+Great! It is working. Now get the number
+```{r}
+library(stringr)
+
+elem <- remDr$findElement(using="xpath",value='//div/h2')$getElementText()
+results <- as.integer(str_match(elem[[1]],"(\\d+) homes")[[2]])
+```
+
+Similarly, check the number of pages. Please notice, we are using _findElement**s**_ instead if _findElement_!
+```{r}
+elem <- remDr$findElements(using="xpath",value='//div/ol/li')
+pages <- length(elem) - 1
+
+```
+
+Now, try to scrape the ads from the page. 
+
+
+One URL link per ad
+```{r}
+elem_link <- remDr$findElements(using ="xpath", value = "//article/div/a")
+links <- sapply(elem_link,function(x){x$getElementAttribute(attrName = "href")})
+links <- unlist(links)
+head(links)
+```
+
+Price per ad
+```{r}
+elem_price <- remDr$findElements(using ="css", value = 'span[class=zsg-photo-card-price]')
+prices <- sapply(elem_price,function(x){x$getElementText()[[1]]})
+head(prices)
+```
+
+Type of property, number of rooms and square feet
+```{r}
+elem_info <- remDr$findElements(using ="css", value = 'span[class="zsg-photo-card-info"')
+info <- sapply(elem_info,function(x){tmp<-x$getElementText()[[1]];str_split(tmp,"·")})
+types <- sapply(info,function(x){x[1]})
+rooms <- sapply(info,function(x){x[2]})
+sqfts <- sapply(info,function(x){str_trim(x[3])})
+
+head(sqfts)
+  
+```
+
+We have all the information about property type, number of rooms, price, link, and area for each ad on the page. Let's put it into 
+newly created tibble
+```{r}
+properties <- tibble(url=character(),price=character(),type=character(), room=character(), sqft=character())
+properties <-properties %>%  add_row(url = links, price=prices, type=types, room=rooms, sqft=sqfts)
+head(properties)
+
+```
+
+This step sometimes fails with the error: `Error: Column `price` must be length 1 or 25, not 24`. Check the page and think about the price - why
+there are fewer price tags than ads?
+
+As a final step we need to make a loop for processing each page. Here you can see we solved the issue with price - think about the difference in 
+code.
+
+
+```{r}
+properties <- tibble(url=character(),price=character(),type=character(), room=character(), sqft=character())
+
+for(page in 1:pages){
+  print(paste("page:",page))
+  
+  #load page (1st page is already loaded - skip it)
+  if(page!=1){
+    url_page=paste0("https://www.zillow.com/homes/for_sale/Castle-Hill-Bronx-New-York-NY/pmf,pf_pt/270812_rid/globalrelevanceex_sort/40.828359,-73.826516,40.809652,-73.87265_rect/14_zm/",page,"_p")
+    remDr$navigate(url_page)
+  }
+  print("Loaded")
+
+  #links
+  elem_link <- remDr$findElements(using ="xpath", value = "//article/div/a")
+  links <- sapply(elem_link,function(x){x$getElementAttribute(attrName = "href")})
+  links <- unlist(links)
+  
+  #prices
+  elem_price <- remDr$findElements(using ="css", value = 'div[class=zsg-photo-card-caption]')
+  prices <- sapply(elem_price,function(x){str_match(x$getElementText()[[1]],"\\$([\\d+,K]+)")[[2]]})
+
+  #
+  elem_info <- remDr$findElements(using ="css", value = 'span[class="zsg-photo-card-info"')
+  info <- sapply(elem_info,function(x){tmp<-x$getElementText()[[1]];str_split(tmp,"·")})
+  types <- sapply(info,function(x){x[1]})
+  rooms <- sapply(info,function(x){x[2]})
+  sqfts <- sapply(info,function(x){str_trim(x[3])})
+
+  #add results to flats
+  properties <-properties %>%  add_row(url = links, price=prices, type=types, room=rooms, sqft=sqfts)
+  print(" .... OK")
+}
+```
+
+Double check the results
+```{r}
+dim(properties)
+```
+
+And check the first few lines
+```{r}
+head(properties)
+```
+
+### What next?
+Standard feature engineering:
+- make _price_ column consistent
+- Are _room_ and _sqft_ columns OK?
+- what other data/information we might need for our analysis
+
+By solving these questions, we create a valid data source for our data science work.
+For example, lets count how much space is for sell (how many sqft):
+```{r}
+properties$sqft2 <- str_replace(properties$sqft, "\\s*sqft\\s*","") %>% str_replace(",","") %>% as.numeric()
+sum(properties$sqft2, na.rm = TRUE)
+```
