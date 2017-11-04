@@ -128,8 +128,15 @@ library(RSelenium)
 
 Initialize our session (browser).
 ```{r}
-rD <- rsDriver(port=4444L, browser = "firefox")
-remDr <- rD$client
+#this worked in previous versions (selenium server didnt have to be running)
+#rD <- rsDriver(port=4444L, browser = "firefox")
+#remDr <- rD$client
+
+remDr <- remoteDriver(remoteServerAddr = "localhost" 
+                      , port = 6000L
+                      , browserName = "firefox"
+                      )
+remDr$open()
 ```
 
 and open the page
@@ -222,7 +229,7 @@ prices <- sapply(texts,function(x){str_match(x, "\\n([\\d ]+) Kč\\n")[[2]]}, US
 We have all the information about flats -- price, area and link for each ad on the page. Let's store these info
 into new tibble
 ```{r}
-flats <- tibble(url = character(), price = character(), sqm = character(), text = character())
+flats <-tibble(url = character(), price = character(), sqm = character(), text = character())
 flats <-flats %>%  add_row(url = urls, price=prices, sqm = sqm, text = texts)
 flats
 ```
