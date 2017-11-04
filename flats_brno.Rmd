@@ -133,11 +133,14 @@ Initialize our session (browser).
 #remDr <- rD$client
 
 remDr <- remoteDriver(remoteServerAddr = "localhost" 
-                      , port = 6000L
+                      , port = 5000L
                       , browserName = "firefox"
                       )
 remDr$open()
 ```
+
+
+
 
 and open the page
 
