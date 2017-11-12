@@ -544,27 +544,47 @@ for(page in 1:pages){
 <p>Double check the results</p>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuZGltKGZsYXRzKVxuYGBgIn0= -->
+<pre class="r"><code>dim(flats)</code></pre>
+<!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 <p>And check the first few lines</p>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuaGVhZChmbGF0cylcbmBgYCJ9 -->
+<pre class="r"><code>head(flats)</code></pre>
+<!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuZmxhdHMgJT4lIGNvdW50KHVybCwgc29ydCA9IFRSVUUpICU+JSBoZWFkKClcbmBgYCJ9 -->
+<pre class="r"><code>flats %&gt;% count(url, sort = TRUE) %&gt;% head()</code></pre>
+<!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuZmxhdHMgJT4lIGZpbHRlcih1cmw9PVwiaHR0cHM6Ly93d3cuc3JlYWxpdHkuY3ovZGV0YWlsL3Byb2Rlai9ieXQvNSsxL2Jybm8tLS8yMDkxNzI1MTQ4XCIpICU+JSBzZWxlY3QodGV4dClcbmBgYCJ9 -->
+<pre class="r"><code>flats %&gt;% filter(url==&quot;https://www.sreality.cz/detail/prodej/byt/5+1/brno--/2091725148&quot;) %&gt;% select(text)</code></pre>
+<!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuZmxhdHMgJT4lIGZpbHRlcih1cmw9PVwiaHR0cHM6Ly93d3cuc3JlYWxpdHkuY3ovZGV0YWlsL3Byb2Rlai9ieXQvMitray9icm5vLS1tbHluc2thLzIzNjYzNjE5NDhcIiklPiUgc2VsZWN0KHRleHQpXG5gYGAifQ== -->
+<pre class="r"><code>flats %&gt;% filter(url==&quot;https://www.sreality.cz/detail/prodej/byt/2+kk/brno--mlynska/2366361948&quot;)%&gt;% select(text)</code></pre>
+<!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuZmxhdHMgPC0gZmxhdHMgJT4lIGdyb3VwX2J5KHVybCkgJT4lIHN1bW1hcmlzZShwcmljZT1maXJzdChwcmljZSksdGV4dD1maXJzdCh0ZXh0KSxzcW09Zmlyc3Qoc3FtKSlcblxuZGltKGZsYXRzKVxuYGBgIn0= -->
+<pre class="r"><code>flats &lt;- flats %&gt;% group_by(url) %&gt;% summarise(price=first(price),text=first(text),sqm=first(sqm))
+
+dim(flats)</code></pre>
+<!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 </div>
@@ -582,21 +602,35 @@ for(page in 1:pages){
 <p>Convert square meters into numeric</p>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuZmxhdHMkc3FtbiA8LSBhcy5udW1lcmljKGZsYXRzJHNxbSlcbmZsYXRzJHNxbW5cbmBgYCJ9 -->
+<pre class="r"><code>flats$sqmn &lt;- as.numeric(flats$sqm)
+flats$sqmn</code></pre>
+<!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 <p>format price into proper shape (remove empty spaces, convert to integers)</p>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxuZmxhdHMkcHJpY2VuIDwtIGFzLm51bWVyaWMoc3RyX3JlcGxhY2VfYWxsKGZsYXRzJHByaWNlLHBhdHRlcm4gPSBcIlxcXFxzK1wiLFwiXCIpKVxuZmxhdHMkcHJpY2VuXG5gYGAifQ== -->
+<pre class="r"><code>flats$pricen &lt;- as.numeric(str_replace_all(flats$price,pattern = &quot;\\s+&quot;,&quot;&quot;))
+flats$pricen</code></pre>
+<!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 <p>The mean price is</p>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubWVhbihmbGF0cyRwcmljZW4sIG5hLnJtID0gVFJVRSlcbmBgYCJ9 -->
+<pre class="r"><code>mean(flats$pricen, na.rm = TRUE)</code></pre>
+<!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 <p>The mean price for 1 square meter (2017-08-03)</p>
 <!-- rnb-text-end -->
 <!-- rnb-chunk-begin -->
+<!-- rnb-source-begin eyJkYXRhIjoiYGBgclxubWVhbihmbGF0cyRwcmljZW4sIG5hLnJtID0gVFJVRSkvbWVhbihmbGF0cyRzcW1uLCBuYS5ybSA9IFRSVUUpXG5gYGAifQ== -->
+<pre class="r"><code>mean(flats$pricen, na.rm = TRUE)/mean(flats$sqmn, na.rm = TRUE)</code></pre>
+<!-- rnb-source-end -->
 <!-- rnb-chunk-end -->
 <!-- rnb-text-begin -->
 <!-- rnb-text-end -->
