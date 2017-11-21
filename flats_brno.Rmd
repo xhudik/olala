@@ -74,8 +74,7 @@ possible to use for getting dynamic context (like social media that use logins a
 
 ### Scraping complex dynamic pages
 
-_let's find a mean price for bigger flats in Brno and its countryside:
-_[sreality.cz](https://www.sreality.cz/hledani/prodej/byty/brno,brno-venkov?plocha-od=85&plocha-do=10000000000)_.
+_let's find a mean price for bigger flats in Brno and its countryside: [sreality.cz](https://www.sreality.cz/hledani/prodej/byty/brno,brno-venkov?plocha-od=85&plocha-do=10000000000)._
 First, we need to found out a number of properties at the bottom of the page
 ![](nproperties.jpg)
 
