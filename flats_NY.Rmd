@@ -46,7 +46,7 @@ From the source code, we can see that one element above our `<span>` is `stronge
 Open R Studio and start the scraping! Load libraries
 
 ```{r results='hide'}
-library(tidyverse)
+library(dplyr)
 library(rvest)
 ```
 
@@ -116,14 +116,20 @@ These SW are great but we would need to speak 2 extra languages: Java and JavaSc
 Now, let's go back to our task
 
 ```{r results='hide'}
-library(tidyverse)
+library(dplyr)
 library(RSelenium)
 ```
 
 Initialize our session (browser).
 ```{r}
-rD <- rsDriver(port=6539L, browser = "firefox")
-remDr <- rD$client
+#rD <- rsDriver(port=6539L, browser = "firefox")
+#remDr <- rD$client
+
+remDr <- remoteDriver(remoteServerAddr = "localhost" 
+                      , port = 5000L
+                      , browserName = "firefox"
+                      )
+remDr$open()
 ```
 
 and open the page
@@ -219,12 +225,21 @@ properties <- tibble(url=character(),price=character(),type=character(), room=ch
 for(page in 1:pages){
   print(paste("page:",page))
   
-  #load page (1st page is already loaded - skip it)
-  if(page!=1){
-    url_page=paste0("https://www.zillow.com/homes/for_sale/Castle-Hill-Bronx-New-York-NY/pmf,pf_pt/270812_rid/globalrelevanceex_sort/40.828359,-73.826516,40.809652,-73.87265_rect/14_zm/",page,"_p")
-    remDr$navigate(url_page)
+  #is it loaded?
+  loaded = FALSE
+  for(try in 1:3){
+   url_page=paste0("https://www.zillow.com/homes/for_sale/Castle-Hill-Bronx-New-York-NY/pmf,pf_pt/270812_rid/globalrelevanceex_sort/40.828359,-73.826516,40.809652,-73.87265_rect/14_zm/",page,"_p")
+   remDr$navigate(url_page)
+   
+  elem_price <- remDr$findElements(using ="css", value = 'div[class=zsg-photo-card-caption]')
+  if(length(elem_price)>0) {
+    loaded=TRUE
+    break()
   }
-  print("Loaded")
+  }
+
+  if(loaded) print("Loaded")
+  else print("The page was NOT loaded!")
 
   #links
   elem_link <- remDr$findElements(using ="xpath", value = "//article/div/a")

@@ -47,7 +47,7 @@ Open R Studio and start the scraping! Load libraries
 
 
 ```{r results='hide'}
-library(tidyverse)
+library(dplyr)
 library(rvest)
 ```
 
@@ -79,7 +79,7 @@ First, we need to found out a number of properties at the bottom of the page
 ![](nproperties.jpg)
 
 
-With Firebug, we find out - we need XPath: `//div[23]/p/span[2]"` (why this string?)
+With Firebug, we find out - we need XPath: `//div[22]/p/span[2]"` (why this string?)
 
 ```{r}
 properties <- read_html("https://www.sreality.cz/hledani/prodej/byty/brno,brno-venkov?plocha-od=85&plocha-do=10000000000") %>% 
@@ -120,7 +120,7 @@ These SW are nice but we would need to speak 2 extra languages: Java and JavaScr
 Now, let's go back to our task
 
 ```{r results='hide'}
-library(tidyverse)
+#library(tidyverse)
 library(RSelenium)
 ```
 
@@ -161,7 +161,7 @@ We can see that the page is correct now - it contains all the info we need (numb
 Let's find the number via FireBug. Once we have the path, we can validate it via _RSelenium_ (show the element with yellow background for 
 5 seconds)
 ```{r}
-found <- remDr$findElement(using = "xpath",value='//div[23]/p/span[2]')
+found <- remDr$findElement(using = "xpath",value='//div[22]/p/span[2]')
 found$highlightElement(wait = 5)
 ```
 
@@ -169,7 +169,7 @@ found$highlightElement(wait = 5)
 
 Great! It is working. Now get the number
 ```{r}
-elem <- remDr$findElement(using="xpath",value='//div[23]/p/span[2]')$getElementText()
+elem <- remDr$findElement(using="xpath",value='//div[22]/p/span[2]')$getElementText()
 flats_found <- as.integer(elem[[1]])
 flats_found
 ```
@@ -297,7 +297,7 @@ flats %>% count(url, sort = TRUE) %>% head()
 
 
 ```{r}
-flats %>% filter(url=="https://www.sreality.cz/detail/prodej/byt/5+1/brno--/2091725148") %>% select(text)
+flats %>% filter(url=="https://www.sreality.cz/detail/prodej/byt/2+kk/brno--mlynska/2416693596") %>% select(text)
 ```
 
 
